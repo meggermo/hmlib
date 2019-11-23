@@ -280,17 +280,17 @@ module Kernel1D = struct
 
   let generate_exact h n =
     let open B in
-    let generate_loglog h n = Array.init n ~f:(loglog h) in
+    let generate_loglog h n = B.Array.init n ~f:(loglog h) in
     let lls = generate_loglog h (n + 2) in
-    let ll i = Array.get lls i in
-    let iis = Array.init n ~f:
+    let ll i = B.Array.get lls i in
+    let iis = B.Array.init n ~f:
         (fun i -> 
            if i = 0 then 
              2.0 *. ll 1 
            else 
              ll (i - 1) -. 2.0 *. ll i +. ll (i + 1)
         ) in
-    fun i j -> Array.get iis (abs (i - j))
+    fun i j -> B.Array.get iis (abs (i - j))
 
   let%expect_test "I(i..i+1) I(j..j+1) log|x - y| dx dy = -1.5" =
     let g_ij = generate_exact 1.0 3 in

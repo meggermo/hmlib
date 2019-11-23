@@ -1,4 +1,4 @@
-module B = Hmlib.Block1D
+module B = Block.Block1D
 module S = Hmlib.SuperBlock
 
 

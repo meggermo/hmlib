@@ -1,6 +1,6 @@
 (executable
  (public_name hmlib)
  (name main)
- (libraries hmlib base lacaml)
+ (libraries base lacaml block hmlib)
  (preprocess
   (pps ppx_expect)))

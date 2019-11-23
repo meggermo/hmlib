@@ -1,221 +1,8 @@
 
-module Domain1D = struct
-
-  type t =
-    { xb : float
-    ; diam : float
-    }
-
-  let create ?(xb=0.0) diam =
-    let _ = assert (diam > 0.0) in
-    { xb; diam }
-
-  let unit_domain = 
-    create 1.0
-
-  let xb { xb; _ } =
-    xb
-
-  let diam { diam; _ } =
-    diam
-
-  let xe d =
-    Base.Float.(xb d + diam d)
-
-  let xc d =
-    Base.Float.( 0.5 * (xb d + xe d) )
-
-  let dist d1 d2 =
-    if xe d1 <= xb d2 then
-      Base.Float.(xb d2 - xe d1)
-    else
-      Base.Float.(xb d1 - xe d2)
-
-  let split d =
-    let dh = Base.Float.( 0.5 * diam d ) in
-    create ~xb:(xb d) dh,
-    create ~xb:(xc d) dh
-
-  let as_string d =
-    Format.sprintf "[ %g; %g ]" (xb d) (xe d)
-
-  let%expect_test "splitting" =
-    let d1, d2 = split unit_domain in
-    Format.printf "%s %s" (as_string d1) (as_string d2);
-    [%expect {| [ 0; 0.5 ] [ 0.5; 1 ] |}]
-
-end
-
-module IndexSet1D = struct
-
-  type t =
-    { ib : int
-    ; size : int
-    }
-
-  let create size =
-    let _ = assert (size > 0) in
-    { ib = 1; size }
-
-  let ib { ib; _ } =
-    ib
-
-  let size { size; _ } =
-    size
-
-  let ie i =
-    ib i + size i - 1
-
-  let split d =
-    let sh = size d / 2 in
-    { ib = ib d; size = sh },
-    { ib = ib d + sh; size = sh }
-
-  let as_string i =
-    Format.sprintf "[ %i; %i ]" (ib i) (ie i)
-
-  let%expect_test "splitting" =
-    let i1, i2 = split (create 10) in
-    Format.printf "%s %s" (as_string i1) (as_string i2);
-    [%expect {| [ 1; 5 ] [ 6; 10 ] |}]
-
-end
-
-module Interval1D = struct
-
-  module D = Domain1D
-  module I = IndexSet1D
-
-  type t =
-    { i : I.t
-    ; d : D.t
-    }
-
-  let create ?(xb=0.0) diam n =
-    { d = D.create ~xb diam
-    ; i = I.create n 
-    }
-
-  let split { i; d } =
-    let i1, i2 = I.split i in
-    let d1, d2 = D.split d in
-    { d = d1; i = i1 },
-    { d = d2; i = i2 }
-
-  let diam { d; _ } =
-    D.diam d
-
-  let dist { d = d1; _ } { d = d2; _ } =
-    D.dist d1 d2
-
-  let subvec { i; _ }  v =
-    Bigarray.Array1.sub v (I.ib i) (I.size i)
-
-  let size { i; _ } =
-    I.size i
-
-  let h i =
-    diam i /. (Base.Float.of_int (size i - 1))
-
-end
-
-module Block1D = struct
-
-  module I = Interval1D
-
-  type t =
-    { tau : I.t
-    ; sigma: I.t
-    }
-
-  let create ?(xb=0.0) diam n =
-    let i = I.create ~xb diam n in
-    { tau = i
-    ; sigma = i
-    }
-
-  let split { tau; sigma } =
-    let t1, t2 = I.split tau in
-    let s1, s2 = I.split sigma in
-    [ { tau = t1; sigma = s1 }
-    ; { tau = t2; sigma = s1 }
-    ; { tau = t1; sigma = s2 }
-    ; { tau = t2; sigma = s2 }
-    ]
-
-  module Row = struct
-
-    let size { tau; _ } =
-      I.size tau
-
-    let subvec { tau; _ } v =
-      I.subvec tau v
-
-    let h { tau; _} =
-      I.h tau
-
-  end
-
-  module Col = struct
-
-    let size { sigma; _ } =
-      I.size sigma
-
-    let h { sigma; _ } =
-      I.h sigma
-
-    let subvec { sigma; _ } v =
-      I.subvec sigma v
-
-  end
-
-  let diam { tau; _ } =
-    I.diam tau
-
-  let dist { tau; sigma } =
-    I.dist tau sigma
-
-end
-
-module FullMatrix = struct
-
-  module D = Lacaml.D
-
-  type t = D.mat
-
-  let create =
-    D.Mat.make0
-
-  let matvec m v ~y =
-    D.gemv m v ~beta:1.0 ~y
-
-end
-
-module RankMatrix = struct
-
-  module D = Lacaml.D
-
-  type t =
-    { a : D.mat
-    ; b : D.mat
-    }
-
-  let create ~rank rows cols =
-    { a = D.Mat.make0 rows rank
-    ; b = D.Mat.make0 cols rank
-    } 
-
-  let matvec m v ~y =
-    v
-    |> D.gemv m.b ~trans:`T
-    |> D.gemv m.a ~beta:1.0 ~y
-
-end
-
 module FullBlock1D = struct
 
-  module F = FullMatrix
-  module B = Block1D
+  module F = Matrix.FullMatrix
+  module B = Block.Block1D
 
   type t =
     { b : B.t
@@ -240,8 +27,8 @@ end
 
 module RankBlock1D = struct
 
-  module R = RankMatrix
-  module B = Block1D
+  module R = Matrix.RankMatrix
+  module B = Block.Block1D
 
   type t =
     { b : B.t
@@ -293,7 +80,7 @@ module Kernel1D = struct
       Format.printf "%g %g %g" (g_ij 0 0) (g_ij 0 1) (g_ij 2 0);
       [%expect {| -1.5 -0.113706 0.671167|}]
 
-    module B = Block1D
+    module B = Block.Block1D
     module F = FullBlock1D
 
     let compute ({ b; m } : F.t) =
@@ -313,7 +100,7 @@ end
 
 module SuperBlock = struct
 
-  module B = Block1D
+  module B = Block.Block1D
   module F = FullBlock1D
   module R = RankBlock1D
 

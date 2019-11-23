@@ -44,7 +44,7 @@ module RankBlock1D = struct
     let v' = B.Row.subvec b v in
     let y' = B.Col.subvec b y in
     let _  = R.matvec m v' ~y:y' in
-    y'
+    y
 
 end
 

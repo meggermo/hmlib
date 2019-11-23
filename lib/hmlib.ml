@@ -157,7 +157,7 @@ module Block1D = struct
   end
 
   module Col = struct
-  
+
     let size { sigma; _ } =
       I.size sigma
 
@@ -168,7 +168,7 @@ module Block1D = struct
       I.subvec sigma v
 
   end
-  
+
   let diam { tau; _ } =
     I.diam tau
 
@@ -253,9 +253,6 @@ module RankBlock1D = struct
     ; m = R.create ~rank (B.Row.size b) (B.Col.size b) 
     }
 
-  let compute b f =
-    let _ = f b.m in b
-
   let matvec { b; m } v ~y =
     let v' = B.Row.subvec b v in
     let y' = B.Col.subvec b y in
@@ -266,36 +263,51 @@ end
 
 module Kernel1D = struct
 
-  module B = Base
+  module Full = struct
 
-  let primitive hk_sqr =
-    B.Float.( 0.25 * hk_sqr * (log hk_sqr - 3.0))
+    let primitive hk_sqr =
+      Base.Float.( 0.25 * hk_sqr * (log hk_sqr - 3.0))
 
-  let loglog h k =
-    if k = 0 then
-      0.0
-    else
-      let hk = B.Float.( h * of_int k) in
-      primitive (hk *. hk)
+    let loglog h k =
+      if k = 0 then
+        0.0
+      else
+        let hk = Base.Float.( h * of_int k) in
+        primitive (hk *. hk)
 
-  let generate_exact h n =
-    let open B in
-    let generate_loglog h n = B.Array.init n ~f:(loglog h) in
-    let lls = generate_loglog h (n + 2) in
-    let ll i = B.Array.get lls i in
-    let iis = B.Array.init n ~f:
-        (fun i -> 
-           if i = 0 then 
-             2.0 *. ll 1 
-           else 
-             ll (i - 1) -. 2.0 *. ll i +. ll (i + 1)
-        ) in
-    fun i j -> B.Array.get iis (abs (i - j))
+    let generate_exact h n =
+      let generate_loglog h n = Base.Array.init n ~f:(loglog h) in
+      let lls = generate_loglog h (n + 2) in
+      let ll i = Base.Array.get lls i in
+      let iis = Base.Array.init n ~f:
+          (fun i -> 
+             if i = 0 then 
+               (2.0 *. ll 1) /. h
+             else 
+               (ll (i - 1) -. 2.0 *. ll i +. ll (i + 1)) /. h
+          ) in
+      fun i j -> Base.Array.get iis (abs (i - j))
 
-  let%expect_test "I(i..i+1) I(j..j+1) log|x - y| dx dy = -1.5" =
-    let g_ij = generate_exact 1.0 3 in
-    Format.printf "%g %g %g" (g_ij 0 0) (g_ij 0 1) (g_ij 2 0);
-    [%expect {| -1.5 -0.113706 0.671167|}]
+    let%expect_test "I(i..i+1) I(j..j+1) log|x - y| dx dy = -1.5" =
+      let g_ij = generate_exact 1.0 3 in
+      Format.printf "%g %g %g" (g_ij 0 0) (g_ij 0 1) (g_ij 2 0);
+      [%expect {| -1.5 -0.113706 0.671167|}]
+
+    module B = Block1D
+    module F = FullBlock1D
+
+    let compute ({ b; m } : F.t) =
+      let rows, cols = B.Row.size b, B.Col.size b in
+      let h = B.Row.h b in
+      let g_ij = generate_exact h rows in
+      for j = 1 to cols do
+        for i = j to rows do
+          m.{i, j}<- (g_ij i j);
+          m.{j, i}<- (g_ij j i);
+        done;
+      done;
+
+  end
 
 end
 
@@ -361,5 +373,19 @@ module SuperBlock = struct
     let rb = rank_blocks sb |> List.length in
     Format.printf "R = %i, F = %i " rb fb;
     [%expect {| R = 6, F = 10 |}]
+
+  let compute sb =
+    fold ~init:sb
+      ~fs:(fun b _ -> b)
+      ~ff:(fun b fb -> Kernel1D.Full.compute fb; b)
+      ~fr:(fun b _ -> b)
+      sb
+
+  let matvec x ~y sb =
+    fold ~init:y
+      ~fs:(fun y _ -> y)
+      ~ff:(fun y fb -> FullBlock1D.matvec fb x ~y:y)
+      ~fr:(fun y rb -> RankBlock1D.matvec rb x ~y:y)
+      sb
 
 end

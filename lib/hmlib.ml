@@ -143,24 +143,32 @@ module Block1D = struct
     ; { tau = t2; sigma = s2 }
     ]
 
-  let row_size { tau; _ } =
-    I.size tau
+  module Row = struct
 
-  let row_subvec { tau; _ } v =
-    I.subvec tau v
+    let size { tau; _ } =
+      I.size tau
 
-  let row_h { tau; _} =
-    I.h tau
+    let subvec { tau; _ } v =
+      I.subvec tau v
 
-  let col_size { sigma; _ } =
-    I.size sigma
+    let h { tau; _} =
+      I.h tau
 
-  let col_h { sigma; _ } =
-    I.h sigma
+  end
 
-  let col_subvec { sigma; _ } v =
-    I.subvec sigma v
+  module Col = struct
+  
+    let size { sigma; _ } =
+      I.size sigma
 
+    let h { sigma; _ } =
+      I.h sigma
+
+    let subvec { sigma; _ } v =
+      I.subvec sigma v
+
+  end
+  
   let diam { tau; _ } =
     I.diam tau
 
@@ -216,15 +224,15 @@ module FullBlock1D = struct
 
   let create b =
     { b
-    ; m = F.create (B.row_size b) (B.col_size b)
+    ; m = F.create (B.Row.size b) (B.Col.size b)
     }
 
   let compute b f =
     let _ = f b.m in b
 
   let matvec { b; m } v ~y =
-    let v' = B.row_subvec b v in
-    let y' = B.col_subvec b y in
+    let v' = B.Row.subvec b v in
+    let y' = B.Col.subvec b y in
     let _ = F.matvec m v' ~y:y' in
     y
 
@@ -242,15 +250,15 @@ module RankBlock1D = struct
 
   let create ~rank b =
     { b
-    ; m = R.create ~rank (B.row_size b) (B.col_size b) 
+    ; m = R.create ~rank (B.Row.size b) (B.Col.size b) 
     }
 
   let compute b f =
     let _ = f b.m in b
 
   let matvec { b; m } v ~y =
-    let v' = B.row_subvec b v in
-    let y' = B.col_subvec b y in
+    let v' = B.Row.subvec b v in
+    let y' = B.Col.subvec b y in
     let _  = R.matvec m v' ~y:y' in
     y'
 
@@ -310,7 +318,7 @@ module SuperBlock = struct
     B.diam b <= B.dist b
 
   let is_small_enough min_block_size b =
-    min (B.row_size b) (B.col_size b) <= min_block_size
+    min (B.Row.size b) (B.Col.size b) <= min_block_size
 
   let rec build ~rank ~min_block_size b =
     if is_admissible b then

@@ -1,0 +1,6 @@
+(library
+ (inline_tests)
+ (name hmlib)
+ (libraries base lacaml)
+ (preprocess
+  (pps ppx_inline_test ppx_expect)))

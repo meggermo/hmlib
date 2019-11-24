@@ -85,33 +85,31 @@ module RankBlock1D = struct
     let _  = R.matvec m v' ~y:y' in
     y
 
-  let compute_a { b; m } =
-    let hc = 1.0 /. B.Row.h b in
-    let xc = B.Row.linspace b |> B.minus_xc b in
+  let compute_a { b; m } x =
+    let xc = B.Row.subvec b x |> B.min_xc b in
     for nu = 1 to R.rank m do
       let open Base in
       let nu_p = Float.of_int nu in
       for i = 1 to B.Row.size b do
-        m.a.{i, nu}<- hc *. (xc.{i + 1} **. nu_p -. xc.{i} **. nu_p) /. nu_p
+        m.a.{i, nu}<- (xc.{i + 1} **. nu_p -. xc.{i} **. nu_p) /. nu_p
       done;
     done
 
-  let compute_b { b; m } =
-    let hc = 1.0 /. B.Row.h b in
-    let yc = B.Col.linspace b |> B.minus_xc b in
+  let compute_b { b; m } y =
+    let yc = B.Col.subvec b y |> B.min_xc b in
     let open Base in
     for j = 1 to B.Col.size b do
       let ym = Float.abs yc.{j} in
       let yp = Float .abs yc.{j + 1} in
       let lm = Float.log ym in
       let lp = Float.log yp in
-      m.b.{j, 1}<- hc *. (yp *. (lp -. 1.0) -. ym *. (lm -. 1.0));
-      m.b.{j, 2}<- hc *. (lm -. lp);
+      m.b.{j, 1}<- yp *. (lp -. 1.0) -. ym *. (lm -. 1.0);
+      m.b.{j, 2}<- lm -. lp;
     done
 
-  let compute rb =
-    compute_a rb;
-    compute_b rb;
+  let compute rb x y =
+    compute_a rb x;
+    compute_b rb y;
 
 end
 
@@ -129,6 +127,11 @@ module SuperBlock = struct
     { b : B.t
     ; bs : t list
     }
+
+  let linspaces = function
+  | SB { b; _ }
+  | FB { b; _ }
+  | RB { b; _ } -> B.Row.linspace b, B.Col.linspace b     
 
   let is_admissible b =
     B.diam b <= B.dist b
@@ -179,10 +182,11 @@ module SuperBlock = struct
     [%expect {| R = 6, F = 10 |}]
 
   let compute sb =
+    let x, y = linspaces sb in
     fold ~init:sb
       ~fs:(fun b _ -> b)
       ~ff:(fun b fb -> F.compute fb; b)
-      ~fr:(fun b rb -> R.compute rb; b)
+      ~fr:(fun b rb -> R.compute rb x y; b)
       sb
 
   let matvec x ~y sb =

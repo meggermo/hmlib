@@ -1,6 +1,6 @@
 (library
  (inline_tests)
  (name indexed_domain)
- (libraries domain indexset)
+ (libraries lacaml domain indexset)
  (preprocess
   (pps ppx_inline_test ppx_expect)))

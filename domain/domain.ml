@@ -25,15 +25,16 @@ module Domain1D = struct
     Base.Float.( 0.5 * (xb d + xe d) )
 
   let dist d1 d2 =
+    let open Base.Float in
     if xe d1 <= xb d2 then
-      Base.Float.(xb d2 - xe d1)
+      xb d2 - xe d1
     else
-      Base.Float.(xb d1 - xe d2)
+      xb d1 - xe d2
 
   let split d =
-    let dh = Base.Float.( 0.5 * diam d ) in
-    create ~xb:(xb d) dh,
-    create ~xb:(xc d) dh
+    let half_diam = Base.Float.( 0.5 * diam d ) in
+    create ~xb:(xb d) half_diam,
+    create ~xb:(xc d) half_diam
 
   let as_string d =
     Format.sprintf "[ %g; %g ]" (xb d) (xe d)

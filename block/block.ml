@@ -1,7 +1,6 @@
 module Block1D = struct
 
   module I = Indexed_domain.Indexed_Domain1D
-  module V = Lacaml.D.Vec
 
   type t =
     { tau : I.t
@@ -49,8 +48,8 @@ module Block1D = struct
     let h { tau; _} =
       I.h tau
 
-    let linspace b =
-      V.linspace (xb b) (xe b) (size b + 1)
+    let linspace { tau; _ } =
+      I.linspace tau
 
   end
 
@@ -77,8 +76,8 @@ module Block1D = struct
     let xe { sigma; _ } =
       I.xe sigma
 
-    let linspace b =
-      V.linspace (xb b) (xe b) (size b + 1)
+    let linspace { sigma; _ } =
+      I.linspace sigma
 
   end
 
@@ -88,13 +87,13 @@ module Block1D = struct
   let dist { tau; sigma } =
     I.dist tau sigma
 
-  let minus_xc b v =
-    V.add_const (-1.0 *. Row.xc b) v
+  let min_xc { tau; _ } =
+    I.min_xc tau
 
 
   let%expect_test "row linspace" =
     let b = unit_block 2 in
-    let x = Row.linspace b |> minus_xc b in
+    let x = Row.linspace b |> min_xc b in
     Format.printf "%a" (Lacaml.Io.pp_fvec) x;
     [%expect {|
       -0.5
@@ -104,7 +103,7 @@ module Block1D = struct
 
   let%expect_test "col linspace" =
     let b = unit_block 4 in
-    let y = Col.linspace b |> minus_xc b in
+    let y = Col.linspace b |> min_xc b in
     Format.printf "%a" (Lacaml.Io.pp_fvec) y;
     [%expect {|
        -0.5

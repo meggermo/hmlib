@@ -2,6 +2,7 @@ module Indexed_Domain1D = struct
 
   module D = Domain.Domain1D
   module I = Indexset.IndexSet1D
+  module V = Lacaml.D.Vec
 
   type t =
     { i : I.t
@@ -30,7 +31,7 @@ module Indexed_Domain1D = struct
 
   let ib { i; _ } =
     I.ib i
-    
+
   let size { i; _ } =
     I.size i
 
@@ -45,6 +46,12 @@ module Indexed_Domain1D = struct
 
   let h i =
     diam i /. (Base.Float.of_int (size i - 1))
+
+  let linspace i =
+    V.linspace (xb i) (xe i) (size i + 1)
+
+  let min_xc i v =
+    V.add_const ( -1.0 *. xc i) v
 
 end
 

@@ -14,14 +14,50 @@ module FullBlock1D = struct
     ; m = F.create (B.Row.size b) (B.Col.size b)
     }
 
-  let compute b f =
-    let _ = f b.m in b
-
   let matvec { b; m } v ~y =
     let v' = B.Row.subvec b v in
     let y' = B.Col.subvec b y in
     let _ = F.matvec m v' ~y:y' in
     y
+
+  let primitive hk_sqr =
+    Base.Float.( 0.25 * hk_sqr * (log hk_sqr - 3.0))
+
+  let loglog h k =
+    if k = 0 then
+      0.0
+    else
+      let hk = Base.Float.( h * of_int k) in
+      primitive (hk *. hk)
+
+  let generate_exact h n =
+    let generate_loglog h n = Base.Array.init n ~f:(loglog h) in
+    let lls = generate_loglog h (n + 2) in
+    let ll i = Base.Array.get lls i in
+    let iis = Base.Array.init n ~f:
+        (fun i -> 
+           if i = 0 then 
+             (2.0 *. ll 1) /. h
+           else 
+             (ll (i - 1) -. 2.0 *. ll i +. ll (i + 1)) /. h
+        ) in
+    fun i j -> Base.Array.get iis (abs (i - j))
+
+  let%expect_test "I(i..i+1) I(j..j+1) log|x - y| dx dy" =
+    let g_ij = generate_exact 1.0 3 in
+    Format.printf "%g %g %g" (g_ij 0 0) (g_ij 0 1) (g_ij 2 0);
+    [%expect {| -1.5 -0.113706 0.671167|}]
+
+  let compute { b; m } =
+    let rows, cols = B.Row.size b, B.Col.size b in
+    let h = B.Row.h b in
+    let g_ij = generate_exact h rows in
+    for j = 1 to cols do
+      for i = j to rows do
+        m.{i, j}<- g_ij i j;
+        m.{j, i}<- g_ij j i;
+      done;
+    done;
 
 end
 
@@ -35,6 +71,9 @@ module RankBlock1D = struct
     ; m : R.t
     }
 
+  let rank { m; _ } =
+    R.rank m
+
   let create ~rank b =
     { b
     ; m = R.create ~rank (B.Row.size b) (B.Col.size b) 
@@ -46,55 +85,33 @@ module RankBlock1D = struct
     let _  = R.matvec m v' ~y:y' in
     y
 
-end
-
-module Kernel1D = struct
-
-  module Full = struct
-
-    let primitive hk_sqr =
-      Base.Float.( 0.25 * hk_sqr * (log hk_sqr - 3.0))
-
-    let loglog h k =
-      if k = 0 then
-        0.0
-      else
-        let hk = Base.Float.( h * of_int k) in
-        primitive (hk *. hk)
-
-    let generate_exact h n =
-      let generate_loglog h n = Base.Array.init n ~f:(loglog h) in
-      let lls = generate_loglog h (n + 2) in
-      let ll i = Base.Array.get lls i in
-      let iis = Base.Array.init n ~f:
-          (fun i -> 
-             if i = 0 then 
-               (2.0 *. ll 1) /. h
-             else 
-               (ll (i - 1) -. 2.0 *. ll i +. ll (i + 1)) /. h
-          ) in
-      fun i j -> Base.Array.get iis (abs (i - j))
-
-    let%expect_test "I(i..i+1) I(j..j+1) log|x - y| dx dy = -1.5" =
-      let g_ij = generate_exact 1.0 3 in
-      Format.printf "%g %g %g" (g_ij 0 0) (g_ij 0 1) (g_ij 2 0);
-      [%expect {| -1.5 -0.113706 0.671167|}]
-
-    module B = Block.Block1D
-    module F = FullBlock1D
-
-    let compute ({ b; m } : F.t) =
-      let rows, cols = B.Row.size b, B.Col.size b in
-      let h = B.Row.h b in
-      let g_ij = generate_exact h rows in
-      for j = 1 to cols do
-        for i = j to rows do
-          m.{i, j}<- (g_ij i j);
-          m.{j, i}<- (g_ij j i);
-        done;
+  let compute_a { b; m } =
+    let hc = 1.0 /. B.Row.h b in
+    let xc = B.Row.linspace b |> B.minus_xc b in
+    for nu = 1 to R.rank m do
+      let open Base in
+      let nu_p = Float.of_int nu in
+      for i = 1 to B.Row.size b do
+        m.a.{i, nu}<- hc *. (xc.{i + 1} **. nu_p -. xc.{i} **. nu_p) /. nu_p
       done;
+    done
 
-  end
+  let compute_b { b; m } =
+    let hc = 1.0 /. B.Row.h b in
+    let yc = B.Col.linspace b |> B.minus_xc b in
+    let open Base in
+    for j = 1 to B.Col.size b do
+      let ym = Float.abs yc.{j} in
+      let yp = Float .abs yc.{j + 1} in
+      let lm = Float.log ym in
+      let lp = Float.log yp in
+      m.b.{j, 1}<- hc *. (yp *. (lp -. 1.0) -. ym *. (lm -. 1.0));
+      m.b.{j, 2}<- hc *. (lm -. lp);
+    done
+
+  let compute rb =
+    compute_a rb;
+    compute_b rb;
 
 end
 
@@ -164,15 +181,15 @@ module SuperBlock = struct
   let compute sb =
     fold ~init:sb
       ~fs:(fun b _ -> b)
-      ~ff:(fun b fb -> Kernel1D.Full.compute fb; b)
-      ~fr:(fun b _ -> b)
+      ~ff:(fun b fb -> F.compute fb; b)
+      ~fr:(fun b rb -> R.compute rb; b)
       sb
 
   let matvec x ~y sb =
     fold ~init:y
       ~fs:(fun y _ -> y)
-      ~ff:(fun y fb -> FullBlock1D.matvec fb x ~y:y)
-      ~fr:(fun y rb -> RankBlock1D.matvec rb x ~y:y)
+      ~ff:(fun y fb -> F.matvec fb x ~y:y)
+      ~fr:(fun y rb -> R.matvec rb x ~y:y)
       sb
 
 end

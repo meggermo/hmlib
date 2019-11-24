@@ -15,13 +15,16 @@ module IndexSet1D = struct
   let size { size; _ } =
     size
 
+  let half_size { size; _ } =
+    size / 2
+
   let ie i =
     ib i + size i - 1
 
   let split d =
-    let sh = size d / 2 in
-    { ib = ib d; size = sh },
-    { ib = ib d + sh; size = sh }
+    let size = half_size d in
+    { size; ib = ib d },
+    { size; ib = ib d + size }
 
   let as_string i =
     Format.sprintf "[ %i; %i ]" (ib i) (ie i)

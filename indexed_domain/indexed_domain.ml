@@ -28,8 +28,20 @@ module Indexed_Domain1D = struct
   let subvec { i; _ }  v =
     Bigarray.Array1.sub v (I.ib i) (I.size i)
 
+  let ib { i; _ } =
+    I.ib i
+    
   let size { i; _ } =
     I.size i
+
+  let xb { d; _ } =
+    D.xb d
+
+  let xc { d; _ } =
+    D.xc d
+
+  let xe { d; _ } =
+    D.xe d
 
   let h i =
     diam i /. (Base.Float.of_int (size i - 1))

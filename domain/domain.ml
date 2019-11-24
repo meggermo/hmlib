@@ -43,4 +43,15 @@ module Domain1D = struct
     Format.printf "%s %s" (as_string d1) (as_string d2);
     [%expect {| [ 0; 0.5 ] [ 0.5; 1 ] |}]
 
+  let%expect_test "begin center end" =
+    let d = create ~xb:(-1.0) 2.0 in
+    Format.printf "%g %g %g" (xb d) (xc d) (xe d);
+    [%expect {| -1 0 1 |}]
+
+  let%expect_test "distance" =
+    let d1, d2 = split unit_domain in
+    let (d11, d12), (d21, d22) = split d1, split d2 in
+    Format.printf "%g %g %g" (dist d12 d21) (dist d12 d22) (dist d11 d22);
+    [%expect {| 0 0.25 0.5 |}]
+
 end

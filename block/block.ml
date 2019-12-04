@@ -45,6 +45,9 @@ module Block1D = struct
     let subvec { tau; _ } v =
       I.subvec tau v
 
+    let subvec_e { tau; _ } v =
+      I.subvec_e tau v
+
     let h { tau; _} =
       I.h tau
 
@@ -66,6 +69,9 @@ module Block1D = struct
 
     let subvec { sigma; _ } v =
       I.subvec sigma v
+
+    let subvec_e { sigma; _ } v =
+      I.subvec_e sigma v
 
     let xb { sigma; _ } =
       I.xb sigma

@@ -1,6 +1,6 @@
 (library
  (inline_tests)
- (name hmlib)
- (libraries superblock)
+ (name fullblock)
+ (libraries matrix block)
  (preprocess
   (pps ppx_inline_test ppx_expect)))

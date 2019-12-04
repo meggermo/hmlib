@@ -1,2 +1,6 @@
-(lang dune 1.11)
+(lang dune 2.0)
 (name hmlib)
+(version 0.0.1)
+(license MIT)
+(authors "Michiel Eggermont")
+(source (github meggermo/hmlib))

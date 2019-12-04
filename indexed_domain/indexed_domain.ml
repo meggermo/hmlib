@@ -29,6 +29,9 @@ module Indexed_Domain1D = struct
   let subvec { i; _ }  v =
     Bigarray.Array1.sub v (I.ib i) (I.size i)
 
+  let subvec_e { i; _ }  v =
+    Bigarray.Array1.sub v (I.ib i) (I.size i + 1)
+
   let ib { i; _ } =
     I.ib i
 

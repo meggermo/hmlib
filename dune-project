@@ -1,4 +1,4 @@
-(lang dune 2.0)
+(lang dune 2.2)
 (name hmlib)
 (version 0.0.1)
 (license MIT)

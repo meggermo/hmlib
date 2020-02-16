@@ -1,4 +1,58 @@
-module Block1D = struct
+module Block1D : sig
+  type t
+
+  val create : ?xb:float -> float -> int -> t
+
+  val unit_block : int -> t
+
+  val split : t -> t list
+
+  val diam : t -> float
+
+  val dist : t -> float
+
+  val min_xc : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+  module Row : sig
+    val ib : t -> int
+
+    val xb : t -> float
+
+    val xc : t -> float
+
+    val xe : t -> float
+
+    val size : t -> int
+
+    val subvec : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+    val subvec_e : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+    val h : t -> float
+
+    val linspace : t -> Lacaml.D.vec
+  end
+
+  module Col : sig
+    val ib : t -> int
+
+    val xb : t -> float
+
+    val xc : t -> float
+
+    val xe : t -> float
+
+    val size : t -> int
+
+    val subvec : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+    val subvec_e : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+    val h : t -> float
+
+    val linspace : t -> Lacaml.D.vec
+  end
+end = struct
   module I = Indexed_domain.Indexed_Domain1D
 
   type t = { tau : I.t; sigma : I.t }

@@ -1,4 +1,30 @@
-module Domain1D = struct
+module Domain1D : sig
+  type t
+  (** Representation of a 1D domain *)
+
+  val create : ?xb:float -> float -> t
+  (** [create xb diam] creates a domain [xb, xb + diam].
+  The diam must be positive*)
+
+  val split : t -> t * t
+  (** [split d] splits the domain into [xb d, xc d], [xc d, xe d*)
+
+  val diam : t -> float
+  (** [diam d] returns the diameter of d *)
+
+  val dist : t -> t -> float
+  (** [dist d1 d2] return the distance between d1 and d2.
+  Note that the distance is 0 if the domains overlap. *)
+
+  val xb : t -> float
+  (** [xb d] returns the begin of the domain *)
+
+  val xc : t -> float
+  (** [xc d] returns the center of the domain *)
+
+  val xe : t -> float
+  (** [xe d] returns the end of the domain *)
+end = struct
   type t = { xb : float; diam : float }
 
   let create ?(xb = 0.0) diam =

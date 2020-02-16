@@ -20,11 +20,11 @@ module FullBlock1D = struct
     let m2 = Base.Array.get ms 1 in
     let m3 = Base.Array.get ms 2 in
     let m4 = Base.Array.get ms 3 in
-    m1.m.{1, 1} <- 1.0;
-    m1.m.{2, 2} <- 1.0;
-    m4.m.{1, 1} <- 1.0;
-    m4.m.{2, 2} <- 1.0;
-    m2.m.{2, 1} <- 1.0;
+    F.set m1.m 1 1 1.0;
+    F.set m1.m 2 2 1.0;
+    F.set m4.m 1 1 1.0;
+    F.set m4.m 2 2 1.0;
+    F.set m2.m 2 1 1.0;
     let v = Lacaml.D.Vec.make 4 1.0 in
     let y = Lacaml.D.Vec.make 4 0.0 in
     matvec m1 v ~y |> ignore;
@@ -56,7 +56,7 @@ module FullBlock1D = struct
         let p_mp = loglog (xm -. yp) in
         let p_pm = loglog (xp -. ym) in
         let p_pp = loglog (xp -. yp) in
-        m.{i, j} <- h_inv *. (p_mp +. p_pm -. (p_pp +. p_mm))
+        F.set m i j (h_inv *. (p_mp +. p_pm -. (p_pp +. p_mm)))
       done
     done
 end

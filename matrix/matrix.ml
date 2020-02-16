@@ -1,6 +1,18 @@
-module FullMatrix = struct
-  module D = Lacaml.D
+open Lacaml
 
+module FullMatrix : sig
+  type t
+
+  val create : int -> int -> t
+
+  val rows : t -> int
+
+  val cols : t -> int
+
+  val set : t -> int -> int -> float -> unit
+
+  val matvec : t -> D.vec -> y:D.vec -> D.vec
+end = struct
   type t = D.mat
 
   let create = D.Mat.make0
@@ -8,6 +20,8 @@ module FullMatrix = struct
   let rows = D.Mat.dim1
 
   let cols = D.Mat.dim2
+
+  let set m i j value = m.{i, j} <- value
 
   let matvec m v ~y = D.gemv m v ~beta:1.0 ~trans:`T ~y
 
@@ -29,9 +43,23 @@ module FullMatrix = struct
     |}]
 end
 
-module RankMatrix = struct
-  module D = Lacaml.D
+module RankMatrix : sig
+  type t
 
+  val create : rank:int -> int -> int -> t
+
+  val rows : t -> int
+
+  val cols : t -> int
+
+  val rank : t -> int
+
+  val set_a : t -> int -> int -> float -> unit
+
+  val set_b : t -> int -> int -> float -> unit
+
+  val matvec : t -> D.vec -> y:D.vec -> D.vec
+end = struct
   type t = { a : D.mat; b : D.mat }
 
   let create ~rank rows cols =
@@ -42,6 +70,10 @@ module RankMatrix = struct
   let cols { b; _ } = D.Mat.dim1 b
 
   let rank { a; _ } = D.Mat.dim2 a
+
+  let set_a { a; _ } i j value = a.{i, j} <- value
+
+  let set_b { b; _ } i j value = b.{i, j} <- value
 
   let matvec m v ~y = v |> D.gemv m.b ~trans:`T |> D.gemv m.a ~beta:1.0 ~y
 

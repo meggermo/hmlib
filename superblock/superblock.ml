@@ -1,4 +1,14 @@
-module SuperBlock = struct
+module SuperBlock : sig
+  type t
+
+  val linspaces : t -> Lacaml.D.vec * Lacaml.D.vec
+
+  val build : rank:int -> min_block_size:int -> Block.Block1D.t -> t
+
+  val compute : t -> t
+
+  val matvec : Lacaml.D.vec -> y:Lacaml.D.vec -> t -> Lacaml.D.vec
+end = struct
   module B = Block.Block1D
   module F = Fullblock.FullBlock1D
   module R = Rankblock.RankBlock1D

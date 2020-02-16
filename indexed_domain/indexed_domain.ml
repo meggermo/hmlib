@@ -1,4 +1,34 @@
-module Indexed_Domain1D = struct
+module Indexed_Domain1D : sig
+  type t
+
+  val create : ?xb:float -> float -> int -> t
+
+  val split : t -> t * t
+
+  val diam : t -> float
+
+  val dist : t -> t -> float
+
+  val ib : t -> int
+
+  val size : t -> int
+
+  val xb : t -> float
+
+  val xc : t -> float
+
+  val xe : t -> float
+
+  val h : t -> float
+
+  val subvec : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+  val subvec_e : t -> Lacaml.D.vec -> Lacaml.D.vec
+
+  val linspace : t -> Lacaml.D.vec
+
+  val min_xc : t -> Lacaml.D.vec -> Lacaml.D.vec
+end = struct
   module D = Domain.Domain1D
   module I = Indexset.IndexSet1D
   module V = Lacaml.D.Vec

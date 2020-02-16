@@ -20,7 +20,8 @@ module RankBlock1D = struct
       let open Base in
       let nu = Float.of_int j in
       for i = 1 to B.Row.size b do
-        m.a.{i, j} <- ((xc.{i + 1} **. nu) -. (xc.{i} **. nu)) /. nu
+        let value = ((xc.{i + 1} **. nu) -. (xc.{i} **. nu)) /. nu in
+        R.set_a m i j value
       done
     done
 
@@ -32,8 +33,8 @@ module RankBlock1D = struct
       let yp = Float.abs yc.{j + 1} in
       let lm = Float.log ym in
       let lp = Float.log yp in
-      m.b.{j, 1} <- (yp *. (lp -. 1.0)) -. (ym *. (lm -. 1.0));
-      m.b.{j, 2} <- lm -. lp
+      R.set_b m j 1 ((yp *. (lp -. 1.0)) -. (ym *. (lm -. 1.0)));
+      R.set_b m j 2 (lm -. lp)
     done
 
   let compute rb x y =
